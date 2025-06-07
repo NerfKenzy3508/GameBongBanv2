@@ -1,16 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Game Bóng Bàn - Siêu Căng v2</title>
+    <title>Game Bóng Bàn - Siêu Căng v2.5</title>
     <style>
         body {
-            background: #222;
+            background: #111;
             color: #fff;
-            text-align: center;
             font-family: 'Segoe UI', Arial, sans-serif;
             margin: 0;
             padding: 0;
+            text-align: center;
+            overflow: hidden;
         }
 
         h1 {
@@ -18,28 +19,78 @@
             margin-bottom: 10px;
         }
 
-        #pong {
-            background: #111;
+        canvas {
             display: block;
             margin: 20px auto;
             border: 4px solid #fff;
             box-shadow: 0 0 20px #000;
+            background-color: #000;
+        }
+
+        #taunt {
+            font-size: 24px;
+            color: #ff4444;
+            margin-top: 20px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        #play-again {
+            padding: 10px 20px;
+            background: #0f0;
+            color: #000;
+            font-size: 18px;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            display: none;
+            margin-top: 20px;
+        }
+
+        #play-again:hover {
+            background: #00ff88;
+        }
+
+        /* Hiệu ứng rung màn hình */
+        .shake {
+            animation: shake 0.3s;
+        }
+
+        @keyframes shake {
+            0% { transform: translate(2px, 2px); }
+            25% { transform: translate(-2px, 2px); }
+            50% { transform: translate(2px, -2px); }
+            75% { transform: translate(-2px, -2px); }
+            100% { transform: translate(0, 0); }
         }
     </style>
 </head>
 <body>
-    <h1>Game Bóng Bàn - Siêu Căng v2</h1>
+    <h1>Game Bóng Bàn - Siêu Căng v2.5</h1>
     <canvas id="pong" width="800" height="500"></canvas>
+    <div id="taunt"></div>
+    <button id="play-again">Chơi lại</button>
 
     <script>
         const canvas = document.getElementById('pong');
         const ctx = canvas.getContext('2d');
 
-        const paddleWidth = 12, paddleHeight = 100;
-        const ballRadius = 10;
-        const player = { x: 10, y: canvas.height/2 - paddleHeight/2, width: paddleWidth, height: paddleHeight, color: '#0f0', score: 0 };
-        const ai = { x: canvas.width - paddleWidth - 10, y: canvas.height/2 - paddleHeight/2, width: paddleWidth, height: paddleHeight, color: '#f00', score: 0 };
-        const ball = { x: canvas.width/2, y: canvas.height/2, radius: ballRadius, speed: 5, velocityX: 5, velocityY: 5, color: '#fff' };
+        const player = { x: 10, y: canvas.height / 2 - 50, width: 12, height: 100, color: '#0f0', score: 0 };
+        const ai = { x: canvas.width - 22, y: canvas.height / 2 - 50, width: 12, height: 100, color: '#f00', score: 0 };
+        const ball = { x: canvas.width / 2, y: canvas.height / 2, radius: 10, speed: 5, velocityX: 5, velocityY: 5, color: '#fff' };
+
+        const tauntText = document.getElementById('taunt');
+        const playAgainBtn = document.getElementById('play-again');
+        const body = document.body;
+
+        const taunts = [
+            "Ui zời dễ vãi l*n!",
+            "M* mày mấy thằng oắc con này!",
+            "Trình còn non lắm em ơi!",
+            "Khóc chưa 😏?",
+            "Về luyện thêm đi nhóc!"
+        ];
 
         function drawRect(x, y, w, h, color) {
             ctx.fillStyle = color;
@@ -49,52 +100,67 @@
         function drawCircle(x, y, r, color) {
             ctx.fillStyle = color;
             ctx.beginPath();
-            ctx.arc(x, y, r, 0, Math.PI*2, false);
+            ctx.arc(x, y, r, 0, Math.PI * 2, false);
             ctx.closePath();
             ctx.fill();
         }
 
         function drawText(text, x, y, color) {
             ctx.fillStyle = color;
-            ctx.font = "32px Arial";
+            ctx.font = '32px Arial';
             ctx.fillText(text, x, y);
-        }
-
-        function resetBall() {
-            ball.x = canvas.width/2;
-            ball.y = canvas.height/2;
-            ball.velocityX = (Math.random() > 0.5 ? 1 : -1) * ball.speed;
-            ball.velocityY = (Math.random() * 2 - 1) * ball.speed;
         }
 
         function drawNet() {
             for (let i = 0; i < canvas.height; i += 20) {
-                drawRect(canvas.width/2 - 1, i, 2, 10, "#fff");
+                drawRect(canvas.width / 2 - 1, i, 2, 10, '#fff');
             }
         }
 
+        function resetBall() {
+            ball.x = canvas.width / 2;
+            ball.y = canvas.height / 2;
+            ball.speed = 5;
+            ball.velocityX = (Math.random() > 0.5 ? 1 : -1) * ball.speed;
+            ball.velocityY = (Math.random() * 2 - 1) * ball.speed;
+        }
+
         function collision(b, p) {
-            return b.x - b.radius < p.x + p.width &&
-                   b.x + b.radius > p.x &&
-                   b.y - b.radius < p.y + p.height &&
-                   b.y + b.radius > p.y;
+            return (
+                b.x - b.radius < p.x + p.width &&
+                b.x + b.radius > p.x &&
+                b.y - b.radius < p.y + p.height &&
+                b.y + b.radius > p.y
+            );
         }
 
         function moveAi() {
             let center = ai.y + ai.height / 2;
-            if (center < ball.y - 20) {
-                ai.y += 4;
-            } else if (center > ball.y + 20) {
-                ai.y -= 4;
-            }
+            if (center < ball.y - 35) ai.y += 6;
+            else if (center > ball.y + 35) ai.y -= 6;
             ai.y = Math.max(Math.min(ai.y, canvas.height - ai.height), 0);
         }
 
-        canvas.addEventListener("mousemove", function(evt) {
-            let rect = canvas.getBoundingClientRect();
-            let mouseY = evt.clientY - rect.top;
-            player.y = mouseY - player.height / 2;
+        canvas.addEventListener('mousemove', function (evt) {
+            const rect = canvas.getBoundingClientRect();
+            player.y = evt.clientY - rect.top - player.height / 2;
             player.y = Math.max(Math.min(player.y, canvas.height - player.height), 0);
+        });
+
+        function botWins() {
+            const msg = taunts[Math.floor(Math.random() * taunts.length)];
+            tauntText.textContent = msg;
+            body.classList.add('shake');
+            setTimeout(() => body.classList.remove('shake'), 400);
+            playAgainBtn.style.display = 'inline-block';
+        }
+
+        playAgainBtn.addEventListener('click', () => {
+            player.score = 0;
+            ai.score = 0;
+            tauntText.textContent = '';
+            playAgainBtn.style.display = 'none';
+            resetBall();
         });
 
         function update() {
@@ -106,59 +172,32 @@
             }
 
             if (collision(ball, player)) {
-                ball.x = player.x + player.width + ball.radius;
-                let collidePoint = ball.y - (player.y + player.height/2);
-                collidePoint = collidePoint / (player.height/2);
-                let angle = collidePoint * Math.PI/4;
-                let direction = 1;
-                ball.velocityX = direction * ball.speed * Math.cos(angle);
+                let collidePoint = ball.y - (player.y + player.height / 2);
+                collidePoint /= player.height / 2;
+                let angle = collidePoint * Math.PI / 4;
+                ball.velocityX = ball.speed * Math.cos(angle);
                 ball.velocityY = ball.speed * Math.sin(angle);
+                ball.speed += 0.3;
             }
 
             if (collision(ball, ai)) {
-                ball.x = ai.x - ball.radius;
-                let collidePoint = ball.y - (ai.y + ai.height/2);
-                collidePoint = collidePoint / (ai.height/2);
-                let angle = collidePoint * Math.PI/4;
-                let direction = -1;
-                ball.velocityX = direction * ball.speed * Math.cos(angle);
+                let collidePoint = ball.y - (ai.y + ai.height / 2);
+                collidePoint /= ai.height / 2;
+                let angle = collidePoint * Math.PI / 4;
+                ball.velocityX = -ball.speed * Math.cos(angle);
                 ball.velocityY = ball.speed * Math.sin(angle);
+                ball.speed += 0.3;
             }
 
-            // ✅ Bot thắng thì chửi nhẹ
             if (ball.x - ball.radius < 0) {
                 ai.score++;
+                botWins();
                 resetBall();
-
-                const phrases = [
-                    "Ui zời dễ vãi l*n!",
-                    "Mấy thằng nhóc tuổi l*n!",
-                    "Căng đấy… mà vẫn thua :))",
-                    "Trình thế mà cũng đòi solo à?",
-                    "Gánh gánh gánh tiếp hộ cái!"
-                ];
-                const phrase = phrases[Math.floor(Math.random() * phrases.length)];
-                const toxicDiv = document.createElement("div");
-                toxicDiv.textContent = phrase;
-                toxicDiv.style.position = "absolute";
-                toxicDiv.style.top = "50%";
-                toxicDiv.style.left = "50%";
-                toxicDiv.style.transform = "translate(-50%, -50%)";
-                toxicDiv.style.background = "rgba(0,0,0,0.7)";
-                toxicDiv.style.color = "#ff4444";
-                toxicDiv.style.padding = "20px 40px";
-                toxicDiv.style.borderRadius = "12px";
-                toxicDiv.style.fontSize = "28px";
-                toxicDiv.style.zIndex = 999;
-                document.body.appendChild(toxicDiv);
-
-                setTimeout(() => {
-                    toxicDiv.remove();
-                }, 2000);
             }
 
             if (ball.x + ball.radius > canvas.width) {
                 player.score++;
+                tauntText.textContent = '';
                 resetBall();
             }
 
@@ -166,22 +205,22 @@
         }
 
         function render() {
-            drawRect(0, 0, canvas.width, canvas.height, "#111");
+            drawRect(0, 0, canvas.width, canvas.height, '#000');
             drawNet();
-            drawText(player.score, canvas.width/4, 50, "#0f0");
-            drawText(ai.score, 3*canvas.width/4, 50, "#f00");
+            drawText(player.score, canvas.width / 4, 50, '#0f0');
+            drawText(ai.score, (3 * canvas.width) / 4, 50, '#f00');
             drawRect(player.x, player.y, player.width, player.height, player.color);
             drawRect(ai.x, ai.y, ai.width, ai.height, ai.color);
             drawCircle(ball.x, ball.y, ball.radius, ball.color);
         }
 
-        function game() {
+        function loop() {
             update();
             render();
-            requestAnimationFrame(game);
+            requestAnimationFrame(loop);
         }
 
-        game();
+        loop();
     </script>
 </body>
 </html>
